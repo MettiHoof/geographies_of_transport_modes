@@ -982,9 +982,13 @@ for metric in metric_list:
 					a=storage_dict[MSOA]['retained_df']['cumsum_absvalues'].values
 				elif value_type=='percentage':
 					a=storage_dict[MSOA]['retained_df']['cumsum_percentage'].values
+					#Get percentages.
+					a=a*100
 
-				
-				#Define weights so that sum of bars = 1
+
+				#Insert a zero value so the line can start from 0,0.	
+				a=np.insert(a, 0, 0)
+				#Create rank values for x_axis
 				x_a=list(range(0,len(a)))
 
 				#Get color:
@@ -1008,7 +1012,7 @@ for metric in metric_list:
 
 				#Set label titles
 				ax.set_xlabel('Rank of desination MSOA (by contribution)',fontsize=9)
-				ax.set_ylabel('{0}'.format(subplot_titles[value_type]),fontsize=9)
+				ax.set_ylabel('{0}'.format(label_titles[value_type]),fontsize=9)
 
 				# Set grid
 				ax.grid(which = 'major', alpha = 0.4,ls=':')
