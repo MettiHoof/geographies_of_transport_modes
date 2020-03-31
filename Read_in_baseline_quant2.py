@@ -40,9 +40,9 @@
 ########################################################
 
 #Put to True if you want to do the preparation for the different modes. 
-car=False
+car=True
 bus=False
-rail=True
+rail=False
 
 #Put to True if you want to do the preparation for the different inputs. 
 dij=True
