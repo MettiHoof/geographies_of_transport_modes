@@ -19,7 +19,7 @@
 #
 # Tobs: observed commuting flows based on census data (in people)
 # Tpred: Quant2 prediction for a baseline scenario (in people)
-# Dij: distance between MSOA based on shortest route in Quant2 (in minutes)
+# Dij: distance between MSOA based on shordf_to_plot route in Quant2 (in minutes)
 #
 #
 ##############################################################################################
@@ -28,9 +28,28 @@
 #-1. User Decisions.
 ########################################################
 
-#Put to True if you want to use one or both of these directions.
+#Put to True if you want to use this direction. 
+#Note that you can only use one direction at the time
 home_to_work=True
-work_to_home=True
+work_to_home=False
+
+if home_to_work and work_to_home:
+	raise Exception('You have selected both home_to_work and work_to_home to be True, please choose only one to be True.')
+elif home_to_work==False and work_to_home==False:
+	raise Exception('You have selected both home_to_work and work_to_home to be False, please choose one of them to be True.')
+
+
+#Put to True if you want to use the observed commuters (from census) or the predicted commuters (from the quant model) 
+#Note that you can only use one direction at the time
+observed=True
+predicted=False
+
+if observed and predicted:
+	raise Exception('You have selected both observed and predicted to be True, please choose only one to be True.')
+elif observed==False and predicted==False:
+	raise Exception('You have selected both observed and predicted to be False, please choose one of them to be True.')
+
+
 
 ########################################################
 #-1. Hard-coded elements
@@ -59,7 +78,7 @@ import pickle #For storing data in pickles
 
 #Where inputdata lives and output will be put
 foldername_input_pickle ='/Users/Metti_Hoof/Desktop/Heavy_data/Pickle_storage_baseline/'  
-foldername_output ='/Users/Metti_Hoof/Desktop/Test/' 
+foldername_output ='/Users/Metti_Hoof/Desktop/df_to_plot/' 
 
 
 ############################
@@ -87,8 +106,8 @@ label_titles={'retained_number_of_msoas': 'Amount of MSOAs commuted to per MSOA'
 subplot_titles={'retained_number_of_msoas': 'number of MSOAs commuted to',
 			'retained_number_of_commuters':'number of commuters',
 			'trips': 'number of trips',
-			'shortest_route':'shortest route',
-			'time_spent':'time spent on shortest route',
+			'shordf_to_plot_route':'shordf_to_plot route',
+			'time_spent':'time spent on shordf_to_plot route',
 			'absolute': 'Cumulative sum',
 			'percentage': 'Weighted cumulative sum'
 			}
@@ -121,27 +140,27 @@ if home_to_work:
 	filename=foldername_input_pickle+MSOA+'_home_to_work'
 	
 	infile = open(filename,'rb')
-	new_dict1 = pickle.load(infile)
+	df_input = pickle.load(infile)
 	infile.close()
 
 	print ('The first five rows of the home to work pickle for MSOA {0} look like this:'.format(MSOA))
-	print(new_dict1.head())
+	print(df_input.head())
 
 	print ('The available columns in the home to work pickle for MSOA {0} are:'.format(MSOA))
-	print(new_dict1.columns)
+	print(df_input.columns)
 
 elif work_to_home:
 	filename=filename=foldername_input_pickle+MSOA+'_work_to_home'
 
 	infile = open(filename,'rb')
-	new_dict2 = pickle.load(infile)
+	df_input = pickle.load(infile)
 	infile.close()
 
 	print ('The first five rows of the work to home pickle for MSOA {0} look like this:'.format(MSOA))
-	print(new_dict2.head())
+	print(df_input.head())
 
 	print ('The available columns in the work to home pickle for MSOA {0} are:'.format(MSOA))
-	print(new_dict2.columns)
+	print(df_input.columns)
 
 
 else:
@@ -202,7 +221,30 @@ MSOA_list=list(df_MSOA_unique_values['MSOA'])
 #2. Plotting information per MSOA
 ########################################################
 
-test=new_dict1
+df_to_plot=df_input
+
+if observed:
+	df_to_plot=df_input[['Tobs_car','Tobs_bus', 'Tobs_rail','Dij_car','Dij_bus', 'Dij_rail']]
+	df_to_plot=df_to_plot.rename(columns={'Tobs_car': 'Abs_car','Tobs_bus': 'Abs_bus','Tobs_rail': 'Abs_rail'}) #Rename for use
+	print('\nWe will be plotting for the observed cases.')
+
+if predicted:
+	df_to_plot=df_input[['Tpred_car','Tpred_bus', 'Tpred_rail','Dij_car','Dij_bus', 'Dij_rail']]
+	df_to_plot=df_to_plot.rename(columns={'Tpred_car': 'Abs_car','Tpred_bus': 'Abs_bus','Tpred_rail': 'Abs_rail'}) #Rename for use
+	print('\nWe will be plotting for the predicted cases.')
+
+#Create values for the CDF. 
+df_to_plot['Rel_car']=df_to_plot['Abs_car']/df_to_plot['Abs_car'].sum()
+df_to_plot=df_to_plot.sort_values(by='Dij_car', ascending=True)
+df_to_plot['Cumsum_percentage_car']=df_to_plot['Rel_car'].cumsum()
+
+df_to_plot['Rel_bus']=df_to_plot['Abs_bus']/df_to_plot['Abs_bus'].sum()
+df_to_plot=df_to_plot.sort_values(by='Dij_bus', ascending=True)
+df_to_plot['Cumsum_percentage_bus']=df_to_plot['Rel_bus'].cumsum()
+
+df_to_plot['Rel_rail']=df_to_plot['Abs_rail']/df_to_plot['Abs_rail'].sum()
+df_to_plot=df_to_plot.sort_values(by='Dij_rail', ascending=True)
+df_to_plot['Cumsum_percentage_rail']=df_to_plot['Rel_rail'].cumsum()
 
 ############################
 #2.1 Visualising number of trips per mode for a given distance for each MSOA.
@@ -211,24 +253,24 @@ test=new_dict1
 #Setting up figure specifications 
 figsize_x_cm=21 #We want our plot to be as wide as the page (21-3left-3right) in centimeter. 
 figsize_x_inches=figsize_x_cm/2.54 #matplotlibs figsize (currently) is in inches only. 
-figsize_y_cm=7
+figsize_y_cm=14
 figsize_y_inches=figsize_y_cm/2.54
 
 #define number of subplots.
 ncols=3
-nrows=1
+nrows=2
 
 #Set up fig and ax
-fig, axarr = plt.subplots(figsize=(figsize_x_inches,figsize_y_inches), ncols=ncols, nrows=nrows, sharex=False, sharey=True)
+fig, axarr = plt.subplots(figsize=(figsize_x_inches,figsize_y_inches), ncols=ncols, nrows=nrows, sharex=False, sharey=False)
 #axarr[row][col]
 
 #Adjust subplots
 left   =  0.08  # the left side of the subplots of the figure
 right  =  0.97    # the right side of the subplots of the figure
-bottom =  0.17    # the bottom of the subplots of the figure
-top    =  0.86    # the top of the subplots of the figure
+bottom =  0.13    # the bottom of the subplots of the figure
+top    =  0.9    # the top of the subplots of the figure
 wspace =  .15     # the amount of width reserved for blank space between subplots
-hspace =  .0    # the amount of height reserved for white space between subplots
+hspace =  .23    # the amount of height reserved for white space between subplots
 
 # This function adjusts the subplots using the parameters defined earlier
 plt.subplots_adjust(
@@ -240,71 +282,87 @@ wspace  =  wspace,
 hspace  =  hspace
 )
 
+#Absolute values
+sc0= axarr[0][0].scatter(x=df_to_plot['Dij_car'],y=df_to_plot['Abs_car'], c=color_dict_mode['car'],s=df_to_plot['Abs_car'])
+sc1= axarr[0][1].scatter(x=df_to_plot['Dij_bus'],y=df_to_plot['Abs_bus'], c=color_dict_mode['bus'],s=df_to_plot['Abs_bus'])
+sc2= axarr[0][2].scatter(x=df_to_plot['Dij_rail'],y=df_to_plot['Abs_rail'], c=color_dict_mode['rail'], s=df_to_plot['Abs_rail'])
 
-sc0= axarr[0].scatter(x=test['Dij_car'],y=test['Tobs_car'], c=color_dict_mode['car'],s=test['Tobs_car'])
-sc1= axarr[1].scatter(x=test['Dij_bus'],y=test['Tobs_bus'], c=color_dict_mode['bus'],s=test['Tobs_bus'])
-sc2= axarr[2].scatter(x=test['Dij_rail'],y=test['Tobs_rail'], c=color_dict_mode['rail'], s=test['Tobs_rail'])
 
+#CDF
+sc0= axarr[1][0].scatter(x=df_to_plot['Dij_car'],y=df_to_plot['Cumsum_percentage_car'], c=color_dict_mode['car'],s=1)
+sc1= axarr[1][1].scatter(x=df_to_plot['Dij_bus'],y=df_to_plot['Cumsum_percentage_bus'], c=color_dict_mode['bus'],s=1)
+sc2= axarr[1][2].scatter(x=df_to_plot['Dij_rail'],y=df_to_plot['Cumsum_percentage_rail'], c=color_dict_mode['rail'], s=1)
 
 #Set titles
-title='Number of commuters departing home from MSOA: {0}'.format(MSOA)
+if home_to_work:
+	title='Commuters leaving home from MSOA: {0}'.format(MSOA)
+elif work_to_home:
+	title='Commuters leaving work from MSOA: {0}'.format(MSOA)
+
 plt.suptitle(title, fontsize=14)
 
-# axarr[0].set_title('Car', y = 0.98, fontsize=10)
-# axarr[1].set_title('Bus', y = 0.98, fontsize=10)
-# axarr[2].set_title('Rail', y = 0.98, fontsize=10)
-
 #Set boxes
-axarr[0].text(.97, .96, 'by car', ha='right', va='top', rotation=0, fontsize=11, color='black',transform=axarr[0].transAxes,
+axarr[0][0].text(.97, .97, 'by car', ha='right', va='top', rotation=0, fontsize=11, color='black',transform=axarr[0][0].transAxes,
 			bbox={'facecolor':'white', 'alpha':0.8,'edgecolor':color_dict_mode['car']})
-axarr[1].text(.97, .96, 'by bus', ha='right', va='top', rotation=0, fontsize=11, color='black',transform=axarr[1].transAxes,
+axarr[0][1].text(.97, .97, 'by bus', ha='right', va='top', rotation=0, fontsize=11, color='black',transform=axarr[0][1].transAxes,
 			bbox={'facecolor':'white', 'alpha':0.8,'edgecolor':color_dict_mode['bus']})
-axarr[2].text(.97, .96, 'by rail', ha='right', va='top', rotation=0, fontsize=11, color='black',transform=axarr[2].transAxes,
+axarr[0][2].text(.97, .97, 'by rail', ha='right', va='top', rotation=0, fontsize=11, color='black',transform=axarr[0][2].transAxes,
 			bbox={'facecolor':'white', 'alpha':0.8,'edgecolor':color_dict_mode['rail']})
 
 #Set up x axis (log scale)
-logticks=[1,10,100,500]
-loglabels=[1,10,100,500]
+logticks=[1,10,30,100,500]
+loglabels=[1,10,30,100,500]
 
-for ax in axarr:
-	ax.set_xlim(1,1000)
-	ax.set_xscale('log')
-	ax.set_xticks(logticks)
-	ax.set_xticklabels(loglabels)
-	#ax.set_xlabel('Distance (km)',fontsize=9)
-	ax.tick_params(axis='x',which='major',labelsize=9,length=4,direction='out',color='0.4')
-	ax.tick_params(axis='x',which='minor',labelsize=9,length=2,direction='out',color='0.6')
+#All subplots
+for axrow in axarr:
+	for ax in axrow:
+		ax.set_xlim(1,1000)
+		ax.set_xscale('log')
+		ax.set_xticks(logticks)
+		ax.set_xticklabels(loglabels)
+		#ax.set_xlabel('Distance (km)',fontsize=9)
+		ax.tick_params(axis='x',which='major',labelsize=9,length=4,direction='out',color='0.4')
+		ax.tick_params(axis='x',which='minor',labelsize=9,length=2,direction='out',color='0.6')
 
 
-
-#Set up y axis (max of observations as limit)
-y_max=test[['Tobs_car','Tobs_bus','Tobs_rail']].max().max()
-y_max=y_max+y_max*0.1
-
-for ax in axarr:
+#Absolute number subplots
+for ax in axarr[0]:
+	#Set up y axis (max of observations as limit)
+	y_max=df_to_plot[['Abs_car','Abs_bus','Abs_rail']].max().max()
+	y_max=y_max+y_max*0.1
 	ax.set_ylim(1,y_max)
 	ax.tick_params(axis='y',labelsize=9,length=2,direction='in',color='0.4')
 
+#Relative numbers subplots
+for ax in axarr[1]:
+	#Set up y axis
+	ax.set_ylim(0,1.02)
+	ax.tick_params(axis='y',labelsize=9,length=2,direction='in',color='0.4')
+
+
+
 #Title for left plot
-axarr[0].set_ylabel('Number of commuters',fontsize=10)
-#Title for moddle plot
-axarr[1].set_xlabel('Distance of commute (km)',fontsize=10)
+axarr[0][0].set_ylabel('Number of commuters',fontsize=10)
+#Title for left plot
+axarr[1][0].set_ylabel('Cumulative share of commuters',fontsize=10)
+#Title for midle plot
+axarr[1][1].set_xlabel('Distance of commute (km)',fontsize=10)
 
 
-#Change outlook of boxes of visuals
-for ax in axarr:
+#Change outlook of boxes of visuals for all subplots
+for axrow in axarr:
+	for ax in axrow:
+		#Set gridlines
+		ax.grid(axis='y', color="0.85", linestyle='--', alpha=0.6, linewidth=0.5)
+		ax.grid(axis='x', which='major', color="0.6", linestyle='--', alpha=0.6, linewidth=0.8)		
+		ax.grid(axis='x', which='minor', color="0.85", linestyle='--', alpha=0.6, linewidth=0.5)		
+		# put the grid behind
+		ax.set_axisbelow(True)
 
-	#Set gridlines
-	ax.grid(axis='y', color="0.85", linestyle='--', alpha=0.6, linewidth=0.5)
-	ax.grid(axis='x', which='major', color="0.6", linestyle='--', alpha=0.6, linewidth=0.8)		
-	ax.grid(axis='x', which='minor', color="0.85", linestyle='--', alpha=0.6, linewidth=0.5)		
-	# put the grid behind
-	ax.set_axisbelow(True)
-
-	#Make frame lighter and change line-width:
-	for pos in ['top','bottom','left','right']:
-		ax.spines[pos].set_linewidth(0.8)
-		ax.spines[pos].set_color('0.6')
+		#Make frame lighter and change line-width:
+		for pos in ['top','bottom','left','right']:
+			ax.spines[pos].set_linewidth(0.8)
+			ax.spines[pos].set_color('0.6')
 
 
 
@@ -391,7 +449,7 @@ plt.show()
 #2.1 Plot of cumulative percentage of individual MSOAs
 ############################
 
-#Create a plot showing the cumulative percentage or absolute values of trips, spent_time or shortest route per MSOA by transport mode. 
+#Create a plot showing the cumulative percentage or absolute values of trips, spent_time or shordf_to_plot route per MSOA by transport mode. 
 
 
 
@@ -399,7 +457,7 @@ plt.show()
 #5.2.1 Plot of cumulative percentage of individual MSOAs
 ############################
 '''
-#Create a plot showing the cumulative percentage or absolute values of trips, spent_time or shortest route per MSOA by transport mode. 
+#Create a plot showing the cumulative percentage or absolute values of trips, spent_time or shordf_to_plot route per MSOA by transport mode. 
 
 value_type_list=['absolute','percentage'] #choose one or both
 
@@ -598,7 +656,7 @@ def msoa_filter_absolute(df,filter_threshold):
 	return dict_filter
 
 
-test=msoa_filter_absolute(new_dict1,10)
+df_to_plot=msoa_filter_absolute(df_input1,10)
 '''
 
 '''
@@ -847,7 +905,7 @@ def msoa_filter_cumsum_percentage(df,cumulative_filter_threshold):
 '''
 
 '''
-#Test cases for the helper functions.
+#df_to_plot cases for the helper functions.
 df=df_Tobs_rail.copy()
 a = msoa_filter_absolute(df,20) 
 b = msoa_filter_percentage(df,0.20) 
@@ -896,7 +954,7 @@ inputfile_Tobs_bus= foldername_input + 'Quant_forMaarten/EWS_TObs_2.csv'
 inputfile_Tobs_rail= foldername_input + 'Quant_forMaarten/EWS_TObs_3.csv' 
 inputfile_Tobs_total= foldername_input + 'Quant_forMaarten/EWS_TObs.csv' 
 
-#Calculated shortest routes by Quant for OD between MSOAS. They serve as input for Quant
+#Calculated shordf_to_plot routes by Quant for OD between MSOAS. They serve as input for Quant
 #Values in these files are 1/time(minutes)
 inputfile_dij_car= foldername_input + 'Quant_forMaarten/dijRoad_min.csv' 
 inputfile_dij_bus= foldername_input + 'Quant_forMaarten/dijBus_min.csv' 
@@ -1093,7 +1151,7 @@ while rail:
 #3.1 Create a minutes spent on mode matrix
 ############################
 
-# We create a table which tells us the minutes spent for each trip, which = number of obs trips * the shortest route distance (in minutes)
+# We create a table which tells us the minutes spent for each trip, which = number of obs trips * the shordf_to_plot route distance (in minutes)
 
 if time_spent: # Only create time_spent if the user is interested in using this.
 	while car:
@@ -1136,8 +1194,8 @@ while car:
 	while trips:
 		input_dict['car']['trips']=df_Tobs_car
 		break
-	while shortest_route:
-		input_dict['car']['shortest_route']=df_dij_car
+	while shordf_to_plot_route:
+		input_dict['car']['shordf_to_plot_route']=df_dij_car
 		break
 	while time_spent:
 		input_dict['car']['time_spent']=df_time_spent_car
@@ -1149,8 +1207,8 @@ while bus:
 	while trips:
 		input_dict['bus']['trips']=df_Tobs_bus
 		break
-	while shortest_route:
-		input_dict['bus']['shortest_route']=df_dij_bus
+	while shordf_to_plot_route:
+		input_dict['bus']['shordf_to_plot_route']=df_dij_bus
 		break
 	while time_spent:
 		input_dict['bus']['time_spent']=df_time_spent_bus
@@ -1162,8 +1220,8 @@ while rail:
 	while trips:
 		input_dict['rail']['trips']=df_Tobs_rail
 		break
-	while shortest_route:
-		input_dict['rail']['shortest_route']=df_dij_rail
+	while shordf_to_plot_route:
+		input_dict['rail']['shordf_to_plot_route']=df_dij_rail
 		break
 	while time_spent:
 		input_dict['rail']['time_spent']=df_time_spent_rail
@@ -1496,7 +1554,7 @@ def msoa_filter_cumsum_percentage(df,cumulative_filter_threshold):
 '''
 
 '''
-#Test cases for the helper functions.
+#df_to_plot cases for the helper functions.
 df=df_Tobs_rail.copy()
 a = msoa_filter_absolute(df,20) 
 b = msoa_filter_percentage(df,0.20) 
@@ -1526,8 +1584,8 @@ while rail:
 	while trips:
 		input_dict['rail']['trips']=df_Tobs_rail
 		break
-	while shortest_route:
-		input_dict['rail']['shortest_route']=df_dij_rail
+	while shordf_to_plot_route:
+		input_dict['rail']['shordf_to_plot_route']=df_dij_rail
 		break
 	while time_spent:
 		input_dict['rail']['time_spent']=df_time_spent_rail
@@ -1669,7 +1727,7 @@ for indicator in indicator_list:
 #5.2.1 Plot of cumulative percentage of individual MSOAs
 ############################
 '''
-#Create a plot showing the cumulative percentage or absolute values of trips, spent_time or shortest route per MSOA by transport mode. 
+#Create a plot showing the cumulative percentage or absolute values of trips, spent_time or shordf_to_plot route per MSOA by transport mode. 
 
 value_type_list=['absolute','percentage'] #choose one or both
 
@@ -1832,11 +1890,11 @@ if home_to_work:
 if work_to_home:
 	directions.append('work_to_home')
 
-metrices=[] #select one or multiple inputmatrices to aggregate['trips','shortest_route','time_spent']
+metrices=[] #select one or multiple inputmatrices to aggregate['trips','shordf_to_plot_route','time_spent']
 if trips:
 	metrices.append('trips')
-if shortest_route:
-	metrices.append('shortest_route')
+if shordf_to_plot_route:
+	metrices.append('shordf_to_plot_route')
 if time_spent:
 	metrices.append('time_spent')
 
@@ -1977,7 +2035,7 @@ for mode in modes:
 
 				if metric=='trips':
 					work_matrix=df_Tobs
-				elif metric=='shortest_route':
+				elif metric=='shordf_to_plot_route':
 					work_matrix=df_dij				
 				elif metric=='time_spent':
 					work_matrix=df_time_spent
@@ -2050,20 +2108,20 @@ df_output.to_csv(file_output)
 ############################################################################################
 
 '''
-test=df_Tobs_car.iloc[0:30, 0:30]
-test2=df_time_spent_car.iloc[0:30, 0:30]
+df_to_plot=df_Tobs_car.iloc[0:30, 0:30]
+df_to_plot2=df_time_spent_car.iloc[0:30, 0:30]
 
 filter_dict={}
-for col in test:
-	df_tussen=test[[col]].copy()
+for col in df_to_plot:
+	df_tussen=df_to_plot[[col]].copy()
 	df_tussen['percentage']=df_tussen[col]/df_tussen[col].sum()
 
 	df_selectie=df_tussen.query("percentage > {0}".format(hardcoded_percentage_filter))[col]
 	filter_dict[col]=df_selectie.index.to_list() 
 
 
-for col in test2:
-	df_tussen2=test2[col].copy()
+for col in df_to_plot2:
+	df_tussen2=df_to_plot2[col].copy()
 	df_tussen3=df_tussen2[df_tussen2.index.isin(filter_dict[col])]
 
 '''
