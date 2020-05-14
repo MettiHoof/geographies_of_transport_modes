@@ -7,7 +7,7 @@
 # Python 3
 #
 # Source files are produced by the Read_in_baseline_quant2.py script
-# Which is using inputdata  from Quant 2 as provided by Richard Miltion the 20th of March 2020
+# Which is using inputdata from Quant 2 as provided by Richard Miltion the 20th of March 2020
 #
 # The inputfile are pickles with the following naming:
 # {MSOA}_home_to_work or {MSOA}work_to_home e.g. E02000518_home_to_work
@@ -41,8 +41,8 @@ elif home_to_work==False and work_to_home==False:
 
 #Put to True if you want to use the observed commuters (from census) or the predicted commuters (from the quant model) 
 #Note that you can only use one direction at the time
-observed=True
-predicted=False
+observed=False
+predicted=True
 
 if observed and predicted:
 	raise Exception('You have selected both observed and predicted to be True, please choose only one to be True.')
@@ -78,7 +78,7 @@ import pickle #For storing data in pickles
 
 #Where inputdata lives and output will be put
 foldername_input_pickle ='/Users/Metti_Hoof/Desktop/Heavy_data/Pickle_storage_baseline/'  
-foldername_output ='/Users/Metti_Hoof/Desktop/df_to_plot/' 
+foldername_output ='/Users/Metti_Hoof/Desktop/Test/' 
 
 
 ############################
@@ -107,9 +107,11 @@ subplot_titles={'retained_number_of_msoas': 'number of MSOAs commuted to',
 			'retained_number_of_commuters':'number of commuters',
 			'trips': 'number of trips',
 			'shordf_to_plot_route':'shordf_to_plot route',
-			'time_spent':'time spent on shordf_to_plot route',
+			'time_spent':'time spent on shortest route',
 			'absolute': 'Cumulative sum',
-			'percentage': 'Weighted cumulative sum'
+			'percentage': 'Weighted cumulative sum',
+			'observed':'observed number of trips',
+			'predicted':'predicte number of trips'
 			}
 
 
@@ -135,6 +137,9 @@ color_dict_mode={'car':colorbrew[0],
 # gives you an example for one MSOA (E02000003) of how to read in these pickles into pandas. 
 
 MSOA='E02000003'
+MSOA_list=['E02000003']
+
+
 
 if home_to_work:
 	filename=foldername_input_pickle+MSOA+'_home_to_work'
@@ -165,6 +170,7 @@ elif work_to_home:
 
 else:
 	print('Please put either home_to_work or work_to_home to True to continue.')
+
 
 
 ######################
@@ -221,6 +227,12 @@ MSOA_list=list(df_MSOA_unique_values['MSOA'])
 #2. Plotting information per MSOA
 ########################################################
 
+
+############################
+#2.1 Visualising number of trips per mode for a given distance for each MSOA.
+############################
+
+'''
 df_to_plot=df_input
 
 if observed:
@@ -246,9 +258,7 @@ df_to_plot['Rel_rail']=df_to_plot['Abs_rail']/df_to_plot['Abs_rail'].sum()
 df_to_plot=df_to_plot.sort_values(by='Dij_rail', ascending=True)
 df_to_plot['Cumsum_percentage_rail']=df_to_plot['Rel_rail'].cumsum()
 
-############################
-#2.1 Visualising number of trips per mode for a given distance for each MSOA.
-############################
+
 
 #Setting up figure specifications 
 figsize_x_cm=21 #We want our plot to be as wide as the page (21-3left-3right) in centimeter. 
@@ -295,9 +305,16 @@ sc2= axarr[1][2].scatter(x=df_to_plot['Dij_rail'],y=df_to_plot['Cumsum_percentag
 
 #Set titles
 if home_to_work:
-	title='Commuters leaving home from MSOA: {0}'.format(MSOA)
+	if observed:
+		title='Observed number of commuters leaving home from MSOA: {0}'.format(MSOA)
+	if predicted:
+		title='Predicted number of commuters leaving home from MSOA: {0}'.format(MSOA)
+
 elif work_to_home:
-	title='Commuters leaving work from MSOA: {0}'.format(MSOA)
+	if observed:
+		title='Observed number of commuters leaving work from MSOA: {0}'.format(MSOA)
+	if predicted:
+		title='Predicted number of commuters leaving work from MSOA: {0}'.format(MSOA)
 
 plt.suptitle(title, fontsize=14)
 
@@ -340,7 +357,6 @@ for ax in axarr[1]:
 	ax.tick_params(axis='y',labelsize=9,length=2,direction='in',color='0.4')
 
 
-
 #Title for left plot
 axarr[0][0].set_ylabel('Number of commuters',fontsize=10)
 #Title for left plot
@@ -364,107 +380,186 @@ for axrow in axarr:
 			ax.spines[pos].set_linewidth(0.8)
 			ax.spines[pos].set_color('0.6')
 
+#save or show
+#plt.show()
 
+if home_to_work:
+	if observed:
+		outputname='Distance_distribution_{0}_home_to_work_observed.png'.format(MSOA)
+	if predicted:
+		outputname='Distance_distribution_{0}_home_to_work_predicted.png'.format(MSOA)
 
+if work_to_home:
+	if observed:
+		outputname='Distance_distribution_{0}_work_to_home_observed.png'.format(MSOA)
+	if predicted:
+		outputname='Distance_distribution_{0}_work_to_home_predicted.png'.format(MSOA)
 
+output=foldername_output+outputname
+plt.savefig(output)
+plt.cla() #clears the axis of the current figure. So the next one can be drawn without creating a new figure (and thus window)
+#plt.clf() #clear the entire figure. Since we define this one outside the loop, we don't want that.
+print ('Figure saved')
 
-
-# axarr[-1][-1].text(.98, .88, 'Median of box', ha='right', va='center', rotation=0, fontsize=9, color='black',style='italic',transform=axarr[-1][-1].transAxes)
-# 		axarr[-1][-1].text(.98, .81, 'Mean of box', ha='right', va='center', rotation=0, fontsize=9, color='black',style='italic',transform=axarr[-1][-1].transAxes)
-
-
-			# #Set size of axes ticks
-			# axarr[axarr_row][axarr_col].tick_params(axis='y',labelsize=10,length=2,direction='in',color='0.6')
-			# axarr[axarr_row][axarr_col].tick_params(axis='x',labelsize=10,length=2,direction='in',color='0.6')
-
-
-
-		# #Set titles
-		# title1='%s' %ax_titles[variable1]
-		# axarr[0].set_title(title1, y = 0.98, fontsize=10)
-		# axarr[1].set_title(title1, y = 0.98, fontsize=10)
-
-		# #Set x limits
-		# axarr[0].set_xlim(-0.1,0.1) #Boundaries of beta
-		# axarr[1].set_xlim(0,0.6) #Boundaries of R2 - er komt er geen hoger dan 0.6
-
-		# maximum=max(n1) + 0.1*max(n1)
-		# axarr[0].set_ylim(0,maximum) #Boundaries of beta
-
-
-
-		# #Set label titles		
-		# axarr[0].set_xlabel('beta',fontsize=9)
-		# axarr[1].set_xlabel('R-squared',fontsize=9)
-
-		# axarr[0].set_ylabel('Probability',fontsize=9)
-		# axarr[1].set_ylabel('Probability',fontsize=9)
-
-		# # Set grid
-		# axarr[0].grid(which = 'major', alpha = 0.4,ls=':')
-		# axarr[1].grid(which = 'major', alpha = 0.4,ls=':')
-
-		# # put the grid behind
-		# axarr[0].set_axisbelow(True)
-		# axarr[1].set_axisbelow(True)
-
-		# # Set ticks parameters
-		# axarr[0].tick_params(axis = 'x', which = 'major', length=2, labelsize = 8) 
-		# axarr[0].tick_params(axis = 'y', which = 'major', length=2, labelsize = 8)
-
-		# axarr[1].tick_params(axis = 'x', which = 'major', length=2, labelsize = 8) 
-		# axarr[1].tick_params(axis = 'y', which = 'major', length=2, labelsize = 8)
-
-
-		# # Make frame lighter and change line-width:
-		# for pos in ['top','bottom','left','right']:
-		# 	axarr[0].spines[pos].set_linewidth(0.5)
-		# 	axarr[0].spines[pos].set_color('0.6')
-			
-		# 	axarr[1].spines[pos].set_linewidth(0.5)
-		# 	axarr[1].spines[pos].set_color('0.6')
-
-
-		# #Set list to numpy array
-		# a=np.array(storage_dict[mode])
-		# #Define weights so that sum of bars = 1
-		# weighta=np.ones_like(a)/float(len(a))
-
-		# #Get color:
-		# #bmap = brewer2mpl.get_map('Blues', 'sequential', 3)
-		# #colorbrew=bmap.hex_colors
-
-		# n1, bins1, patches1 = ax.hist(a, bins=50, weights=weighta, facecolor='blue', alpha=0.75)
-
-		# #Set titles
-		# title1='Histogram of {0} by {1}'.format(subplot_titles[indicator],mode)
-		# ax.set_title(title1, y = 0.98, fontsize=10)
-
-
-
-
-plt.show()
+'''
 
 ############################
-#2.1 Plot of cumulative percentage of individual MSOAs
+#2.2 Plot of cumulative percentage of individual MSOAs
 ############################
 
 #Create a plot showing the cumulative percentage or absolute values of trips, spent_time or shordf_to_plot route per MSOA by transport mode. 
 
+################
+#2.2.1 Set helper functions ready:
+################
+
+
+def msoa_df_creator_cumsum_abs_value(df, cut_off=False):
+	"""This function calculates the cumulative sum of the values in a dataframe for each column
+	The output of the filter is a dict with, for each column, a dataframe containing the values, percentage, and cumsum.
+	If cut_off=True, then the MSOA pairs for which no commuters where observed will be cut off from the dataframe."""
+
+	if cut_off:
+		print('\nYou have opted for a cut-off, the pairs that do not contribute to the cumulative sum will be discarded')
+	else:
+		print('\nYou did not opt for a cut-off, all pairs will be included in the dataframe')
+
+	#Setting up intermediate storage
+	dict_out={}
+	for col in df.columns:
+		dict_out[col]={}
+	colcounter=0
+
+	print('\nWe are calculating the cumsum absolute values for all the MSOAs')
+	for col in df.columns:
+		#Print progress
+		if colcounter%100==0:
+			print('The code is at column number: ' + str(colcounter) + ' and there are ' + str(len(df.columns)) + ' columns to process')
+		colcounter=colcounter+1
+
+		#Evaluate one col only
+		df_subset=df[[col]].copy()
+
+		#Caclulate percentual contribution of all
+		df_subset['percentage']=df_subset[col]/df_subset[col].sum()
+
+		#Sort by most contributing
+		df_subset_sorted=df_subset.sort_values(by=col, ascending=False)
+
+		#Calculate the cumulative sum of the the contributors, starting from the most contributing
+		df_subset_sorted['cumsum_absvalues']=df_subset_sorted[col].cumsum()
+
+		if cut_off==True:
+			#print('\nYou have opted for a cut-off, the pairs that do not contribute to the cumulative sum will be discarded')
+			
+			#Cut off the pairs that do not contribute.	
+			df_subset_sorted_cut_off=df_subset_sorted.loc[(df_subset_sorted[col]> 0)]
+			
+			#Create a filter dict with keys being col names and values being a dataframe with, for each MSOA the MSOA pairs
+			# their percentual contribution and the cumulative sum of contributions starting from the most contributing
+			dict_out[col]['retained_df']=df_subset_sorted_cut_off
+
+			#Create a filter dict with keys being col names and values being the number of pertained MSOA pairst.
+			dict_out[col]['retained_number_of_msoas']=df_subset_sorted_cut_off.shape[0] 
+
+			#Create a filter dict with keys being col names and values number of commuters that are pertained by the filter
+			dict_out[col]['retained_number_of_commuters']=df_subset_sorted_cut_off[col].sum()
+		
+		else:
+			#print('\nYou did not opt for a cut-off, all pairs will be included in the dataframe')
+			#Create a filter dict with keys being col names and values being a dataframe with, for each MSOA the MSOA pairs
+			# their percentual contribution and the cumulative sum of contributions starting from the most contributing
+			dict_out[col]['retained_df']=df_subset_sorted
+
+			#Create a filter dict with keys being col names and values being the number of pertained MSOA pairst.
+			dict_out[col]['retained_number_of_msoas']=df_subset_sorted.shape[0] 
+
+			#Create a filter dict with keys being col names and values number of commuters that are pertained by the filter
+			dict_out[col]['retained_number_of_commuters']=df_subset_sorted[col].sum()
+	
+	return dict_out
+
+
+
+
+def msoa_df_creator_cumsum_percentage(df, cut_off=False):
+	"""This function calculates the cumulative sum of the percentage of values in a dataframe for each column
+	The output of the filter is a dict with, for each column, a dataframe containing the values, percentage, and cumsum.
+	If cut_off=True, then the MSOA pairs for which no commuters where observed will be cut off from the dataframe."""
+
+	if cut_off:
+		print('\nYou have opted for a cut-off, the pairs that do not contribute to the cumulative sum will be discarded')
+	else:
+		print('\nYou did not opt for a cut-off, all pairs will be included in the dataframe')
+
+	#Setting up intermediate storage
+	dict_out={}
+	for col in df.columns:
+		dict_out[col]={}
+	colcounter=0
+
+	print('\nWe are calculating the cumsum percentage for all the MSOAs')
+	for col in df.columns:
+		#Print progress
+		if colcounter%100==0:
+			print('The code is at column number: ' + str(colcounter) + ' and there are ' + str(len(df.columns)) + ' columns to process')
+		colcounter=colcounter+1
+
+		#Evaluate one col only
+		df_subset=df[[col]].copy()
+
+		#Caclulate percentual contribution of all
+		df_subset['percentage']=df_subset[col]/df_subset[col].sum()
+
+		#Sort by most contributing
+		df_subset_sorted=df_subset.sort_values(by='percentage', ascending=False)
+
+		#Calculate the cumulative sum of the the contributors, starting from the most contributing
+		df_subset_sorted['cumsum_percentage']=df_subset_sorted['percentage'].cumsum()
+
+		if cut_off==True:
+			#print('\nYou have opted for a cut-off, the pairs that do not contribute to the cumulative sum will be discarded')
+			
+			#Cut off the pairs that do not contribute.	
+			df_subset_sorted_cut_off=df_subset_sorted.loc[(df_subset_sorted['percentage']> 0)]
+			
+			#Create a filter dict with keys being col names and values being a dataframe with, for each MSOA the MSOA pairs
+			# their percentual contribution and the cumulative sum of contributions starting from the most contributing
+			dict_out[col]['retained_df']=df_subset_sorted_cut_off
+
+			#Create a filter dict with keys being col names and values being the number of pertained MSOA pairst.
+			dict_out[col]['retained_number_of_msoas']=df_subset_sorted_cut_off.shape[0] 
+
+			#Create a filter dict with keys being col names and values number of commuters that are pertained by the filter
+			dict_out[col]['retained_number_of_commuters']=df_subset_sorted_cut_off[col].sum()
+		
+		else:
+			#print('\nYou did not opt for a cut-off, all pairs will be included in the dataframe')
+			#Create a filter dict with keys being col names and values being a dataframe with, for each MSOA the MSOA pairs
+			# their percentual contribution and the cumulative sum of contributions starting from the most contributing
+			dict_out[col]['retained_df']=df_subset_sorted
+
+			#Create a filter dict with keys being col names and values being the number of pertained MSOA pairst.
+			dict_out[col]['retained_number_of_msoas']=df_subset_sorted.shape[0] 
+
+			#Create a filter dict with keys being col names and values number of commuters that are pertained by the filter
+			dict_out[col]['retained_number_of_commuters']=df_subset_sorted[col].sum()
+	
+	return dict_out
 
 
 ############################
-#5.2.1 Plot of cumulative percentage of individual MSOAs
+#2.2.2 Start plotting for each individual MSOA and mode. 
 ############################
 '''
-#Create a plot showing the cumulative percentage or absolute values of trips, spent_time or shordf_to_plot route per MSOA by transport mode. 
-
-value_type_list=['absolute','percentage'] #choose one or both
-
-############# Developing ###############
+value_type_list=['absolute','percentage'] #choose one or both 'absolute','percentage'
 mode_list=['rail']
-metric_list=['trips']
-############# Developing ###############
+metric_list=['predicted'] #'observed','predicted'
+MSOA_list=['E02000003','E02000004']
+
+home_to_work=True
+work_to_home=False
+
 
 #Setting up figure specifications 
 figsize_x_cm=12 #We want our plot to be as wide as the page (21-3left-3right) in centimeter. 
@@ -499,36 +594,54 @@ hspace  =  hspace
 )
 
 
-#Create storage
-storage_dict={}
+for MSOA in MSOA_list:
+	#Read in data
+	if home_to_work:
+		filename=foldername_input_pickle+MSOA+'_home_to_work'
+		infile = open(filename,'rb')
+		df_input = pickle.load(infile)
+		infile.close()
 
-for metric in metric_list:
+	elif work_to_home:
+		filename=filename=foldername_input_pickle+MSOA+'_work_to_home'
+		infile = open(filename,'rb')
+		df_input = pickle.load(infile)
+		infile.close()
 
-	for mode in mode_list:
+	else:
+		print('Please put either home_to_work or work_to_home to True to continue.')
 
-		for value_type in value_type_list:
 
-			print('\nWe are creating the cumulative {0} value graph for {1} of each MSOA for mode {2}'.format(value_type, metric, mode))
-			
-			#Get the data we need from the helper functions
+	#Create storage
+	storage_dict={}
 
-			if value_type=='absolute':
-				storage_dict=msoa_df_creator_cumsum_abs_value(input_dict[mode][metric],cut_off=True)
-			elif value_type=='percentage':
-				storage_dict=msoa_df_creator_cumsum_percentage(input_dict[mode][metric],cut_off=True)
+	for metric in metric_list:
+		for mode in mode_list:
+			for value_type in value_type_list:
+				print('\nWe are creating the cumulative {0} value graph for {1} of for mode {2} and MSOA: {3}'.format(value_type, metric, mode,MSOA))
 
-			print('\nWe now start plotting for each individual MSOA. This may take a while')
-			#Each key in the storage dict corresponds to one MSOA.
-			for MSOA in storage_dict.keys():
+				#Set the name of the rows we want to use:
+				if metric=='observed':
+					col_to_plot='Tobs_{}'.format(mode)
+
+				elif metric=='predicted':
+					col_to_plot='Tpred_{}'.format(mode)
+
+
+				#Get the data we need from the helper functions
+				if value_type=='absolute':
+					storage_dict=msoa_df_creator_cumsum_abs_value(df_input[[col_to_plot]],cut_off=True) #we do [[]] here so it becomes a df, which is the required input for our helper function creator.
+				elif value_type=='percentage':
+					storage_dict=msoa_df_creator_cumsum_percentage(df_input[[col_to_plot]],cut_off=True)
+				
 
 				#Get the cumulative, ordered data into a numpy array using values function. We will use this array to plot.
 				if value_type=='absolute':
-					a=storage_dict[MSOA]['retained_df']['cumsum_absvalues'].values
+					a=storage_dict[col_to_plot]['retained_df']['cumsum_absvalues'].values
 				elif value_type=='percentage':
-					a=storage_dict[MSOA]['retained_df']['cumsum_percentage'].values
+					a=storage_dict[col_to_plot]['retained_df']['cumsum_percentage'].values
 					#Get percentages.
 					a=a*100
-
 
 				#Insert a zero value so the line can start from 0,0.	
 				a=np.insert(a, 0, 0)
@@ -540,7 +653,7 @@ for metric in metric_list:
 				#colorbrew=bmap.hex_colors
 
 				#Plot on currently active axis.
-				ax.plot(a,color='blue', alpha=0.75)
+				ax.plot(a,color=color_dict_mode[mode], alpha=0.75)
 
 				#Helpline
 				slope=max(a)/max(x_a)
@@ -555,7 +668,7 @@ for metric in metric_list:
 				#ax.set_ylim(0,1)
 
 				#Set label titles
-				ax.set_xlabel('Rank of desination MSOA (by contribution)',fontsize=9)
+				ax.set_xlabel('Rank of destination MSOA (by contribution)',fontsize=9)
 				ax.set_ylabel('{0}'.format(label_titles[value_type]),fontsize=9)
 
 				# Set grid
@@ -573,22 +686,199 @@ for metric in metric_list:
 					ax.spines[pos].set_linewidth(0.5)
 					ax.spines[pos].set_color('0.6')
 
+				# #save or show
+				# plt.show()
+				if home_to_work:
+					outputname='Cumsum_individual_modes/{3}_cumsum_{0}_{1}_by_{2}_home_to_work.png'.format(value_type,metric,mode,MSOA)
+				if work_to_home:
+					outputname='Cumsum_individual_modes/{3}_cumsum_{0}_{1}_by_{2}_work_to_home.png'.format(value_type,metric,mode,MSOA)
 
-				#save or show
-				#plt.show()
-				
-				#save or show
-				outputname='Cumsum/{3}_cumsum_{0}_{1}_by_{2}.png'.format(value_type,metric,mode,MSOA)
 				output=foldername_output+outputname
 				plt.savefig(output)
 				plt.cla() #clears the axis of the current figure. So the next one can be drawn without creating a new figure (and thus window)
 				#plt.clf() #clear the entire figure. Since we define this one outside the loop, we don't want that.
 				print ('Figure saved')
-
-
 '''
 
 
+
+############################
+#2.2.3 Start plotting all modes for each individual MSOA, compare predicted with observed. 
+############################
+
+value_type_list=['absolute','percentage'] #choose one or both 'absolute','percentage'
+mode_list=['car','bus','rail']
+MSOA_list=['E02000003','E02000004']
+
+home_to_work=True
+work_to_home=False
+
+
+for MSOA in MSOA_list:
+	#Read in data
+	if home_to_work:
+		filename=foldername_input_pickle+MSOA+'_home_to_work'
+		infile = open(filename,'rb')
+		df_input = pickle.load(infile)
+		infile.close()
+
+	elif work_to_home:
+		filename=filename=foldername_input_pickle+MSOA+'_work_to_home'
+		infile = open(filename,'rb')
+		df_input = pickle.load(infile)
+		infile.close()
+
+	else:
+		print('Please put either home_to_work or work_to_home to True to continue.')
+
+
+
+	#Setting up figure specifications 
+	figsize_x_cm=19 #We want our plot to be as wide as the page (21-3left-3right) in centimeter. 
+	figsize_x_inches=figsize_x_cm/2.54 #matplotlibs figsize (currently) is in inches only. 
+	figsize_y_cm=12
+	figsize_y_inches=figsize_y_cm/2.54
+
+	#define number of subplots.
+	ncols=3
+	nrows=2
+
+	#Set up fig and ax
+	fig, axarr = plt.subplots(figsize=(figsize_x_inches,figsize_y_inches), ncols=ncols, nrows=nrows, sharex=False, sharey=False)
+	#axarr[row][col]
+
+	#Adjust subplots
+	left   =  0.08  # the left side of the subplots of the figure
+	right  =  0.97    # the right side of the subplots of the figure
+	bottom =  0.13    # the bottom of the subplots of the figure
+	top    =  0.85    # the top of the subplots of the figure
+	wspace =  .20     # the amount of width reserved for blank space between subplots
+	hspace =  .23    # the amount of height reserved for white space between subplots
+
+	# This function adjusts the subplots using the parameters defined earlier
+	plt.subplots_adjust(
+	left    =  left, 
+	bottom  =  bottom, 
+	right   =  right, 
+	top     =  top, 
+	wspace  =  wspace, 
+	hspace  =  hspace
+	)
+
+
+
+	#Create storage
+	storage_dict_obs={}
+	storage_dict_pred={}
+
+	col=0
+	for mode in mode_list:
+		row=0
+		for value_type in value_type_list:
+			print('\nWe are creating the cumulative {0} value graph for {1} of for mode {2} and MSOA: {3}'.format(value_type, metric, mode,MSOA))
+
+			#Set the name of the rows we want to use:
+			col_to_plot_obs='Tobs_{}'.format(mode)
+			col_to_plot_pred='Tpred_{}'.format(mode)
+
+
+			#Get the data we need from the helper functions
+			if value_type=='absolute':
+				storage_dict_obs=msoa_df_creator_cumsum_abs_value(df_input[[col_to_plot_obs]],cut_off=True) #we do [[]] here so it becomes a df, which is the required input for our helper function creator.
+				storage_dict_pred=msoa_df_creator_cumsum_abs_value(df_input[[col_to_plot_pred]],cut_off=True)
+			elif value_type=='percentage':
+				storage_dict_obs=msoa_df_creator_cumsum_percentage(df_input[[col_to_plot_obs]],cut_off=True)
+				storage_dict_pred=msoa_df_creator_cumsum_percentage(df_input[[col_to_plot_pred]],cut_off=True)
+			
+
+			#Get the cumulative, ordered data into a numpy array using values function. We will use this array to plot.
+			if value_type=='absolute':
+				val_obs=storage_dict_obs[col_to_plot_obs]['retained_df']['cumsum_absvalues'].values
+				val_pred=storage_dict_pred[col_to_plot_pred]['retained_df']['cumsum_absvalues'].values
+			elif value_type=='percentage':
+				val_obs=storage_dict_obs[col_to_plot_obs]['retained_df']['cumsum_percentage'].values
+				val_pred=storage_dict_pred[col_to_plot_pred]['retained_df']['cumsum_percentage'].values
+				#Get percentages.
+				val_obs=val_obs*100
+				val_pred=val_pred*100
+
+			#Insert a zero value so the line can start from 0,0.	
+			val_obs=np.insert(val_obs, 0, 0)
+			val_pred=np.insert(val_pred, 0, 0)
+
+			#Create rank values for x_axis
+			x_val_obs=list(range(0,len(val_obs)))
+			x_val_pred=list(range(0,len(val_obs)))
+
+			#Plot on currently active axis.
+			axarr[row][col].plot(val_obs,color=color_dict_mode[mode], alpha=0.75,label="observed")
+			axarr[row][col].plot(val_pred,ls='--',color=color_dict_mode[mode], alpha=0.5,label="predicted")
+
+			#Helpline
+			# slope=max(val_obs)/max(x_val_obs)
+			# yhelp=[i *slope for i in x_val_obs] 
+			# help_line=axarr[row][col].plot(x_val_obs,yhelp,ls='--',lw=1,color='.4',alpha=0.6)
+
+			row=row+1
+		col=col+1
+
+	#Set legends for some subplots
+	axarr[1][0].legend(loc='lower right',prop={'size': 7})
+	axarr[1][1].legend(loc='lower right',prop={'size': 7})
+	axarr[1][2].legend(loc='lower right',prop={'size': 7})
+
+	#Set titles
+	title1=('Cumulative sum of number of trips by ranked destinations for \n MSOA {0}'.format(MSOA))
+	fig.suptitle(title1, y = 0.98, fontsize=12)
+
+	axarr[0][0].set_title('By car',fontsize=10)
+	axarr[0][1].set_title('By bus',fontsize=10)
+	axarr[0][2].set_title('By rail',fontsize=10)
+
+	#Set labels
+	axarr[1][1].set_xlabel('Rank of destination MSOA (by contribution)',fontsize=9)
+	axarr[0][0].set_ylabel('{0}'.format(label_titles[value_type_list[0]]),fontsize=9)
+	axarr[1][0].set_ylabel('{0}'.format(label_titles[value_type_list[1]]),fontsize=9)
+
+	#All subplots
+	for axrow in axarr:
+		for ax in axrow:
+
+			# Set ticks parameters
+			ax.tick_params(axis = 'x', which = 'major', length=2, labelsize = 8) 
+			ax.tick_params(axis = 'y', which = 'major', length=2, labelsize = 8, direction='in') 
+
+			#Set gridlines
+			ax.grid(axis='y', color="0.85", linestyle='--', alpha=0.6, linewidth=0.5)
+			ax.grid(axis='x', color="0.85", linestyle='--', alpha=0.6, linewidth=0.5)		
+
+			# put the grid behind
+			ax.set_axisbelow(True)
+
+			#Make frame lighter and change line-width:
+			for pos in ['top','bottom','left','right']:
+				ax.spines[pos].set_linewidth(0.8)
+				ax.spines[pos].set_color('0.6')
+
+	#Delete y lables van sommige subplots wegens overbodig. 
+	y_labels=['','','','','','','']
+	axarr[1][1].set_yticklabels(y_labels)
+	axarr[1][1].tick_params(axis = 'y', which = 'major', length=2, labelsize = 0)
+	axarr[1][2].set_yticklabels(y_labels)
+	axarr[1][2].tick_params(axis = 'y', which = 'major', length=2, labelsize = 0)
+
+	#save or show
+	# plt.show()
+
+	if home_to_work:
+		outputname='Cumsum_three_modes/{0}_cumsum_three_modes_obs_vs_predicted_home_to_work.png'.format(MSOA)	
+	if work_to_home:
+		outputname='Cumsum_three_modes/{0}_cumsum_three_modes_obs_vs_predicted_work_to_home.png'.format(MSOA)
+
+	output=foldername_output+outputname
+	plt.savefig(output)
+	plt.clf() #clear the entire figure. Since we define this one outside the loop, we don't want that.
+	print ('Figure saved')
 
 
 
@@ -597,9 +887,36 @@ for metric in metric_list:
 #######################################     Development zone    ################################################
 ################################################################################################################
 ################################################################################################################
-
-
-
+################################################################################################################
+################################################################################################################
+#######################################     Development zone    ################################################
+################################################################################################################
+################################################################################################################
+################################################################################################################
+################################################################################################################
+#######################################     Development zone    ################################################
+################################################################################################################
+################################################################################################################
+################################################################################################################
+################################################################################################################
+#######################################     Development zone    ################################################
+################################################################################################################
+################################################################################################################
+################################################################################################################
+################################################################################################################
+#######################################     Development zone    ################################################
+################################################################################################################
+################################################################################################################
+################################################################################################################
+################################################################################################################
+#######################################     Development zone    ################################################
+################################################################################################################
+################################################################################################################
+################################################################################################################
+################################################################################################################
+#######################################     Development zone    ################################################
+################################################################################################################
+################################################################################################################
 
 
 ########################################################
@@ -1825,7 +2142,7 @@ for metric in metric_list:
 				#ax.set_ylim(0,1)
 
 				#Set label titles
-				ax.set_xlabel('Rank of desination MSOA (by contribution)',fontsize=9)
+				ax.set_xlabel('Rank of destination MSOA (by contribution)',fontsize=9)
 				ax.set_ylabel('{0}'.format(label_titles[value_type]),fontsize=9)
 
 				# Set grid
